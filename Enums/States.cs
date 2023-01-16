@@ -1,9 +1,10 @@
 ﻿namespace Connectify.Enums
 {
-    public class States
+    public enum States
     {
         AL,
         AK,
+        AS,
         AZ,
         AR,
         CA,

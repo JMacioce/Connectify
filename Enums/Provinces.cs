@@ -1,8 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Connectify.Enums
+﻿namespace Connectify.Enums
 {
-    public class Provinces
+    public enum Provinces
     {
         AB,
         BC,
@@ -16,6 +14,6 @@ namespace Connectify.Enums
         PE,
         QC,
         SK,
-        YT
+        YT,
     }
 }

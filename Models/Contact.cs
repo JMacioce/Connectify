@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Connectify.Enums;
 
@@ -10,7 +9,7 @@ namespace Connectify.Models
         public int Id { get; set; }
 
         [Required]
-        public string? AppUserID { get; set; }
+        public string? AppUserId { get; set; }
 
         [Required]
         [Display(Name = "First Name")]

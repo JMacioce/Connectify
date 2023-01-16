@@ -4,10 +4,10 @@ namespace Connectify.Models
 {
     public class Category
     {
-        public int ID { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public string? AppUserID { get; set; }
+        public string? AppUserId { get; set; }
 
         [Required]
         [Display(Name ="Category Name")]
