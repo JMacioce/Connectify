@@ -2,6 +2,8 @@ using Connectify.Data;
 using Connectify.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Connectify.Services;
+using Connectify.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,10 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<AppUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
+
+//Custom Services
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IAddressBookService, AddressBookService>();
 
 var app = builder.Build();
 
