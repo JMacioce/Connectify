@@ -1,8 +1,26 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
+    Layout = "~/Views/Shared/_LayoutLander.cshtml";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row align-items-center h-100 ">
+    <div class="col-12 col-md-6 col-lg-5 order-last order-md-first">
+        <div class="ms-5">
+            <h1 class="heroTitle">
+                Your <span class="texthighlight">connections,</span> at your fingertips
+            </h1>
+            <div class="subtitle">
+                Simplify your life and keep everyone involved with Connectify. Experience the power of Connectify
+                today!<br><br><strong>Built with the following tech:</strong>
+                <br><i class="devicon-dot-net-plain-wordmark colored icon"></i>
+                <i class="devicon-csharp-plain-wordmark colored icon"></i>
+                <i class="devicon-postgresql-plain-wordmark colored icon"></i>
+                <i class="devicon-bootstrap-plain-wordmark colored icon"></i>
+                <i class="devicon-heroku-plain-wordmark colored icon"></i>
+            </div>            
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-7 text-center">
+        <img src="~/img/ConnectifyBG.png" class="img-fluid">
+    </div>
 </div>
