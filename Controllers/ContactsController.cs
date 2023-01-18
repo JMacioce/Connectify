@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Connectify.Data;
 using Connectify.Models;
+using Connectify.Models.ViewModels;
 using Connectify.Enums;
 using Connectify.Services.Interfaces;
 using Connectify.Services;
@@ -22,19 +24,22 @@ namespace Connectify.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IImageService _imageService;
         private readonly IAddressBookService _addressBookService;
+        private readonly IEmailSender _emailService;
 
-        public ContactsController(ApplicationDbContext context, UserManager<AppUser> userManager, IImageService imageService, IAddressBookService addressBookService)
+        public ContactsController(ApplicationDbContext context, UserManager<AppUser> userManager, IImageService imageService, IAddressBookService addressBookService, IEmailSender emailService)
         {
             _context = context;
             _userManager = userManager;
             _imageService = imageService;
             _addressBookService = addressBookService;
+            _emailService = emailService;
         }
 
         // GET: Contacts
         [Authorize]
-        public IActionResult Index(int categoryId)
+        public IActionResult Index(int categoryId, string swalMessage = null)
         {
+            ViewData["SwalMessage"] = swalMessage;
             var contacts = new List<Contact>();
             string? appUserId = _userManager.GetUserId(User);
 
@@ -80,6 +85,53 @@ namespace Connectify.Controllers
             return View(nameof(Index), contacts);
         }
 
+        [Authorize]
+        public async Task<IActionResult> EmailContact(int id)
+        {
+            string? appUserId = _userManager.GetUserId(User);
+            Contact? contact = await _context.Contacts.Where(c => c.Id == id && c.AppUserId == appUserId).FirstOrDefaultAsync();
+
+            if (contact == null)
+            {
+                return NotFound();
+            }
+
+            EmailData? emailData = new EmailData()
+            {
+                EmailAddress = contact.Email,
+                FirstName = contact.FirstName,
+                LastName = contact.LastName
+            };
+
+            EmailContactViewModel model = new EmailContactViewModel()
+            {
+                Contact = contact,
+                EmailData = emailData
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> EmailContact(EmailContactViewModel ecvm)
+        {
+            if(ModelState.IsValid)
+            {
+                try
+                {
+                    await _emailService.SendEmailAsync(ecvm.EmailData.EmailAddress, ecvm.EmailData.Subject, ecvm.EmailData.Body);
+                    return RedirectToAction("Index", "Contacts", new { swalMessage = "Success: Email Sent!"});
+                }
+                catch
+                {
+                    return RedirectToAction("Index", "Contacts", new { swalMessage = "Error Email Send Failed!" });
+                    throw;
+                }
+            }
+            return View(ecvm);
+        }
+
         // GET: Contacts/Details/5
         [Authorize]
         public async Task<IActionResult> Details(int? id)
@@ -104,7 +156,7 @@ namespace Connectify.Controllers
         [Authorize]
         public async Task<IActionResult> Create()
         {
-            string appUserId = _userManager.GetUserId(User);
+            string? appUserId = _userManager.GetUserId(User);
 
             ViewData["StatesList"] = new SelectList(Enum.GetValues(typeof(States)).Cast<States>().ToList());
             ViewData["CategoryList"] = new MultiSelectList(await _addressBookService.GetUserCategoriesAsync(appUserId), "Id", "Name");
@@ -160,12 +212,20 @@ namespace Connectify.Controllers
                 return NotFound();
             }
 
-            var contact = await _context.Contacts.FindAsync(id);
+            string? appUserId = _userManager.GetUserId(User);
+
+            //var contact = await _context.Contacts.FindAsync(id);
+
+            var contact = await _context.Contacts.Where(c => c.Id == id && c.AppUserId == appUserId).FirstOrDefaultAsync();
+
             if (contact == null)
             {
                 return NotFound();
             }
-            ViewData["AppUserId"] = new SelectList(_context.Users, "Id", "Id", contact.AppUserId);
+
+            ViewData["StatesList"] = new SelectList(Enum.GetValues(typeof(States)).Cast<States>().ToList());
+            ViewData["CategoryList"] = new MultiSelectList(await _addressBookService.GetUserCategoriesAsync(appUserId), "Id", "Name", await _addressBookService.GetContactCategoryIdsAsync(contact.Id));
+
             return View(contact);
         }
 
@@ -174,7 +234,7 @@ namespace Connectify.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,PhoneNumber,Created,ImageData,ImageType")] Contact contact)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,AppUserId,FirstName,LastName,BirthDate,Address1,Address2,City,State,ZipCode,Email,PhoneNumber,Created,ImageFile,ImageData,ImageType")] Contact contact, List<int> CategoryList)
         {
             if (id != contact.Id)
             {
@@ -185,8 +245,37 @@ namespace Connectify.Controllers
             {
                 try
                 {
+                    contact.Created = DateTime.SpecifyKind(contact.Created, DateTimeKind.Utc);
+
+                    if(contact.BirthDate != null)
+                    {
+                        contact.BirthDate = DateTime.SpecifyKind(contact.BirthDate.Value, DateTimeKind.Utc);
+                    }
+
+                    if (contact.ImageFile != null)
+                    {
+                        contact.ImageData = await _imageService.ConvertFileToByteArrayAsync(contact.ImageFile);
+                        contact.ImageType = contact.ImageFile.ContentType;
+                    }
+
+                    //save our contact
                     _context.Update(contact);
                     await _context.SaveChangesAsync();
+
+                    //save our categories
+                    //remove the current category
+                    List<Category> oldCategories = (await _addressBookService.GetContactCategoriesAsync(contact.Id)).ToList();
+                    foreach (var category in oldCategories)
+                    {
+                        await _addressBookService.RemoveContactFromCategoryAsync(category.Id, contact.Id);    
+                    }
+
+                    //add the selected categories
+                    foreach(int categoryid in CategoryList)
+                    {
+                        await _addressBookService.AddContactToCategoryAsync(categoryid, contact.Id);
+                    }
+
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -214,9 +303,9 @@ namespace Connectify.Controllers
                 return NotFound();
             }
 
-            var contact = await _context.Contacts
-                .Include(c => c.AppUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            string? appUserId = _userManager.GetUserId(User);
+
+            var contact = await _context.Contacts.FirstOrDefaultAsync(c => c.Id == id && c.AppUserId == appUserId);
             if (contact == null)
             {
                 return NotFound();
@@ -230,17 +319,16 @@ namespace Connectify.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (_context.Contacts == null)
-            {
-                return Problem("Entity set 'ApplicationDbContext.Contacts'  is null.");
-            }
-            var contact = await _context.Contacts.FindAsync(id);
+
+            string? appUserId = _userManager.GetUserId(User);
+
+            var contact = await _context.Contacts.FirstOrDefaultAsync(c => c.Id == id && c.AppUserId == appUserId);
             if (contact != null)
             {
                 _context.Contacts.Remove(contact);
-            }
+                await _context.SaveChangesAsync();
+            }            
             
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 

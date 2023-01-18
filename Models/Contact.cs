@@ -67,6 +67,7 @@ namespace Connectify.Models
         //Image properties
         public byte[]? ImageData { get; set; }
         public string? ImageType { get; set; }
+
         [NotMapped]
         public IFormFile? ImageFile { get; set; }
 
