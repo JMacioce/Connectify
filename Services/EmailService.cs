@@ -18,7 +18,8 @@ namespace Connectify.Services
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            var emailSender = _mailSettings.EMail;
+            // using null-coalescing operator. Email sender will get the local value, but if it is null it will get the value on the right of the null-coalescing operator
+            var emailSender = _mailSettings.EMail ?? Environment.GetEnvironmentVariable("Email");
 
             MimeMessage newEmail = new();
 
@@ -41,9 +42,9 @@ namespace Connectify.Services
 
             try
             {
-                var host = _mailSettings.Host;
-                var port = _mailSettings.Port;
-                var password = _mailSettings.Password;
+                var host = _mailSettings.Host ?? Environment.GetEnvironmentVariable("Host");
+                var port = _mailSettings.Port != 0 ? _mailSettings.Port : int.Parse(Environment.GetEnvironmentVariable("Port")!);
+                var password = _mailSettings.Password ?? Environment.GetEnvironmentVariable("Password") ;
 
                 await smtpClient.ConnectAsync(host, port, SecureSocketOptions.StartTls);
                 await smtpClient.AuthenticateAsync(emailSender, password);
