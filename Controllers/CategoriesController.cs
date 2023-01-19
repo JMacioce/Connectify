@@ -84,24 +84,12 @@ namespace Connectify.Controllers
             return View(ecvm);
         }
 
-        // GET: Categories/Details/5
+        // GET: Categories/Create
         [Authorize]
-        public async Task<IActionResult> Details(int? id)
+        public IActionResult Create()
         {
-            if (id == null || _context.Categories == null)
-            {
-                return NotFound();
-            }
-
-            var category = await _context.Categories
-                .Include(c => c.AppUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (category == null)
-            {
-                return NotFound();
-            }
-
-            return View(category);
+            ViewData["AppUserId"] = new SelectList(_context.Users, "Id", "Id");
+            return View();
         }
 
         // POST: Categories/Create
