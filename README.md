@@ -1,4 +1,4 @@
 # Connectify
-An address book MVC app that let's you manage connections and link with friends!
+An address book MVC app that let's you manage friends and connect with them!
 
 My First Business-Scale Project!
